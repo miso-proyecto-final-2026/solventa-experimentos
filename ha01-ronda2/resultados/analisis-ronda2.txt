@@ -1,0 +1,29 @@
+
+== Escenario A  (escenario-A.json)
+   solicitudes: 91249
+                   p50      p90      p95      p99      max
+   cliente        11.1     61.3    301.5    484.8   1315.1
+   interna         8.4     48.5    273.6    469.7   1227.2
+   cli.régim.     11.0     54.0    267.8    478.9   1315.1
+   brecha cliente-interna: p95 27.9 ms, p99 15.1 ms
+   fallidas 0.00 % | http fallidas 0.00 % | hit régimen 91.77 % (total 90.98 %) | degradadas 0.00 % | aproximadas 0.00 %
+   [ cumple  ] validez: 0 % aproximadas (sin consentimiento)
+   [ cumple  ] fallos == 0 %
+   [no cumple] p95 cliente <= 250 ms
+   [ cumple  ] p99 cliente <= 500 ms
+   [ cumple  ] hit de caché en régimen >= 60%
+
+== Escenario B  (escenario-B.json)
+   solicitudes: 91249
+                   p50      p90      p95      p99      max
+   cliente        11.4     28.1     63.9    106.5    741.2
+   interna         8.7     19.4     53.0     90.4    731.7
+   cli.régim.     11.3     23.9     59.2    106.0    686.0
+   brecha cliente-interna: p95 10.9 ms, p99 16.1 ms
+   fallidas 0.00 % | http fallidas 0.00 % | hit régimen 0.00 % (total 0.00 %) | degradadas 100.00 % | aproximadas 0.00 %
+   [ cumple  ] validez: 0 % aproximadas (sin consentimiento)
+   [ cumple  ] fallos == 0 %
+   [ cumple  ] p95 cliente <= 300 ms
+   [ cumple  ] 100 % degradadas
+
+Informe: resultados\informe-ronda2.json

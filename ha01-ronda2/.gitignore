@@ -1,0 +1,6 @@
+# Salidas pesadas o locales de una corrida: no se versionan
+resultados/clientes.json
+resultados/corrida-*.log
+resultados/escenario-*/escenario-*.json
+resultados/escenario-*/escenario-*.json.gz
+videos/
