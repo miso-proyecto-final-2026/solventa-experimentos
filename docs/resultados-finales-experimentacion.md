@@ -167,6 +167,8 @@ La hipótesis más probable, no verificada con trazas en esta ronda, es el reint
 
 No incumple ninguna meta —HA01 no define p99 para el escenario degradado— pero una cola de 830 ms es material para la experiencia de usuario. La acción propuesta es trasladar el sondeo de recuperación a segundo plano, de modo que ninguna solicitud de usuario pague el costo de descubrir que el proveedor sigue caído.
 
+**Ronda 2 (2026-10-18, local):** con el sondeo de recuperación en segundo plano, el p99 del Escenario B bajó a 106,5 ms y desapareció la solicitud lenta cada 30 segundos, lo que es consistente con la hipótesis. Sigue sin confirmarse con trazas. Ver [`ha01-ronda2/resultados/VEREDICTO.md`](../ha01-ronda2/resultados/VEREDICTO.md).
+
 ## 3.6 Veredicto HA01
 
 **HIPÓTESIS PARCIALMENTE VALIDADA.**
@@ -176,7 +178,7 @@ No incumple ninguna meta —HA01 no define p99 para el escenario degradado— pe
 | Disponibilidad ante degradación | RQ-D2 | **Validada** | Se mantiene el diseño |
 | Latencia en operación degradada | RQ-L1 | **Validada** (123,9 ms ≤ 300 ms) | Se mantiene el diseño |
 | Eficacia de la caché | RQ-L1 | **Validada** (94,4 % ≥ 60 %) | Se mantiene, con dispersión en el TTL |
-| Latencia en operación normal | RQ-L1 | **Refutada** (357,6 ms > 250 ms) | Precisar el punto de medición; segunda medición intra-región |
+| Latencia en operación normal | RQ-L1 | **Refutada** (357,6 ms > 250 ms) | Segunda medición (local, generador en la misma red): p95 de 301,5 ms, sigue sin cumplir, y la brecha cliente–interna bajó a 28 ms. El p95 lo explican los miss de caché (8,2 %), no el punto de medición |
 
 ---
 
@@ -333,7 +335,8 @@ El detalle completo está en el documento *Documento de Arquitectura Ajustado*, 
 | El tramo cliente ↔ borde no estaba representado | Vista funcional, flujo de cotización | Ajuste menor | Presupuesto de latencia explícito por etapa |
 | El balanceador no figuraba como nodo | Vista de despliegue | **Ajuste estructural** | Se incorpora con sus propiedades operativas, incluido el idle timeout no configurable |
 | El registro de latencia no distingue interna de extremo a extremo | Vista de información | Ajuste menor | Dos campos nuevos |
-| Cache-aside, circuit breaker y degradación validados | Patrones | Ninguno | Se marcan como validados; se añade dispersión al TTL |
+| Cache-aside, circuit breaker y degradación validados | Patrones | Ninguno | Se marcan como validados; se añade dispersión al TTL. En la ronda 2, el jitter suavizó pero no eliminó las oleadas de expiración cada ~5 min |
+| La cotización depende síncronamente de Identidad (consentimiento) | Vista funcional, flujo de cotización | Ajuste menor | Presupuesto de latencia por etapa: p95 ≈ 6,5 ms, medido aislado en la ronda 2 |
 | El autoescalado no se activa ni a 30× la carga del ASR | Patrones | **Ajuste de parametrización** | La métrica de escalado deja de ser CPU |
 | La observabilidad prevista no estaba operativa | Plataforma de experimentación | Ajuste de proceso | Captura de estado del cluster implementada |
 

@@ -1,0 +1,101 @@
+{
+  "A": {
+    "origen": [
+      "escenario-A.json"
+    ],
+    "solicitudes": 91249,
+    "latencia_ms": {
+      "cliente": {
+        "n": 91249,
+        "p50": 11.117504,
+        "p90": 61.270457199999996,
+        "p95": 301.49788259999997,
+        "p99": 484.8485505600001,
+        "max": 1315.105306
+      },
+      "interna": {
+        "n": 91249,
+        "p50": 8.44,
+        "p90": 48.47,
+        "p95": 273.55399999999963,
+        "p99": 469.73560000000015,
+        "max": 1227.16
+      },
+      "cliente_regimen": {
+        "n": 88399,
+        "p50": 11.012416,
+        "p90": 54.04334059999998,
+        "p95": 267.81445049999957,
+        "p99": 478.87807364,
+        "max": 1315.105306
+      }
+    },
+    "brecha_cliente_menos_interna_ms": {
+      "p95": 27.943882600000336,
+      "p99": 15.112950559999945
+    },
+    "tasa_cotizaciones_fallidas": 0.0,
+    "tasa_http_fallidas": 0.0,
+    "hit_cache_regimen": 0.9176800642541205,
+    "muestras_hit_regimen": 88399,
+    "hit_cache_total": 0.9098401078367983,
+    "tasa_degradadas": 0.0,
+    "tasa_aproximadas": 0.0,
+    "veredictos": {
+      "validez: 0 % aproximadas (sin consentimiento)": "cumple",
+      "fallos == 0 %": "cumple",
+      "p95 cliente <= 250 ms": "no cumple",
+      "p99 cliente <= 500 ms": "cumple",
+      "hit de caché en régimen >= 60%": "cumple"
+    }
+  },
+  "B": {
+    "origen": [
+      "escenario-B.json"
+    ],
+    "solicitudes": 91249,
+    "latencia_ms": {
+      "cliente": {
+        "n": 91249,
+        "p50": 11.418614,
+        "p90": 28.137012599999988,
+        "p95": 63.861904399999865,
+        "p99": 106.48361656000034,
+        "max": 741.173914
+      },
+      "interna": {
+        "n": 91249,
+        "p50": 8.72,
+        "p90": 19.41,
+        "p95": 52.98599999999991,
+        "p99": 90.41,
+        "max": 731.74
+      },
+      "cliente_regimen": {
+        "n": 88399,
+        "p50": 11.298936,
+        "p90": 23.8941438,
+        "p95": 59.1977302999999,
+        "p99": 105.99798350000106,
+        "max": 686.045822
+      }
+    },
+    "brecha_cliente_menos_interna_ms": {
+      "p95": 10.875904399999953,
+      "p99": 16.073616560000346
+    },
+    "tasa_cotizaciones_fallidas": 0.0,
+    "tasa_http_fallidas": 0.0,
+    "hit_cache_regimen": 0.0,
+    "muestras_hit_regimen": 88399,
+    "hit_cache_total": 0.0,
+    "tasa_degradadas": 1.0,
+    "tasa_aproximadas": 0.0,
+    "veredictos": {
+      "validez: 0 % aproximadas (sin consentimiento)": "cumple",
+      "fallos == 0 %": "cumple",
+      "p95 cliente <= 300 ms": "cumple",
+      "100 % degradadas": "cumple"
+    }
+  }
+}
