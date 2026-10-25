@@ -17,3 +17,9 @@ results/
 .DS_Store
 CLAUDE.md
 k6/data/*.json
+# HA03/HA04: estado local, planes y resultados del generador (no van a git)
+ha03-ha04/ec2-k6/.terraform/
+ha03-ha04/ec2-k6/.terraform.lock.hcl
+ha03-ha04/ec2-k6/*.tfstate*
+ha03-ha04/ec2-k6/*.tfplan
+ha03-ha04/resultados/
