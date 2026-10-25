@@ -145,7 +145,17 @@ kubectl -n monitoring get pods                     # prometheus-server y prometh
 kubectl get apiservice v1beta1.custom.metrics.k8s.io   # Available=True
 kubectl get --raw "/apis/custom.metrics.k8s.io/v1beta1/namespaces/staging/pods/*/http_requests_in_flight"
 kubectl -n staging describe hpa solventa-backend   # dos métricas: http_requests_in_flight (objetivo 3) y cpu (70 %)
+kubectl -n staging get pods -l app.kubernetes.io/name=solventa-backend \
+  --field-selector=status.phase=Succeeded          # vacío (ver nota)
 ```
+
+Notas de la prueba en kind:
+
+- El adaptador solo publica la métrica de los pods nuevos en su siguiente relist (~1 min). Si `get --raw` devuelve una
+  lista vacía o el HPA muestra `<unknown>` justo después del apply, espera 1-2 min antes de declarar falla.
+- Si la consulta de pods `Succeeded` no queda vacía, el pod del Job de migración comparte la etiqueta del selector: el
+  HPA lo cuenta con concurrencia 0 (diluye el promedio) y, como no tiene request de CPU, la métrica de CPU queda en
+  `<unknown>`. Anótalo en `sesion.log` como desviación y no lances la carga hasta resolverlo (arreglo pendiente en infra).
 
 Humo por túnel (desde tu máquina):
 
