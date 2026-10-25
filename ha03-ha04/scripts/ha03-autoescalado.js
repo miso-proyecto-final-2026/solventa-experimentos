@@ -10,13 +10,16 @@
  *   5 min a 500/min (línea base, HPA en el mínimo) -> subida a 50.000/min en 5 min -> 10 min de meseta
  *   -> bajada a 500/min en 1 min -> 8 min a 500/min para observar la reducción (criterio 6; el HPA espera 300 s).
  * Perfil `humo` (5 min): la misma forma comprimida, hasta 5.000/min, para validar el encadenamiento.
+ * Perfil `kind` (12,5 min): prueba local de la cadena métrica -> HPA, de 120 a 1.800/min, con 7 min de reposo para
+ *   ver la bajada (300 s de estabilización + 1 pod/min). Con el simulador a 200-500 ms y cliente_id casi únicos (fallos
+ *   de caché), 1.800/min dan ~10 solicitudes en curso: por encima del objetivo de 3 por pod con 2 pods.
  *
  * Cada muestra lleva la etiqueta `fase` (base, subida, meseta, bajada, reposo) derivada del reloj global del
  * escenario, para que analizar-ha03.py calcule percentiles por fase.
  *
  * Variables de entorno:
  *   COTIZACION_URL  base del servicio (sin /v1/cotizaciones), p. ej. http://<nlb_dns_name>:30080
- *   PERFIL          completo (por defecto) | humo
+ *   PERFIL          completo (por defecto) | humo | kind
  *   CLIENTES_FILE   JSON con los cliente_id sembrados en Identidad (sembrar-clientes.py). Obligatorio en staging:
  *                   sin consentimiento, Cotización responde `aproximada` y la corrida no es válida.
  *   REUSAR_CONEXIONES  "1" reutiliza conexiones. Por defecto no (como HA01: el NLB corta a los 350 s de inactividad).
@@ -57,6 +60,23 @@ const PERFILES = {
       ['reposo', 480],
     ],
   },
+  kind: {
+    pico: 1800,
+    stages: [
+      { target: 120, duration: '1m' },
+      { target: 1800, duration: '1m' },
+      { target: 1800, duration: '3m' },
+      { target: 120, duration: '30s' },
+      { target: 120, duration: '7m' },
+    ],
+    fases: [
+      ['base', 60],
+      ['subida', 60],
+      ['meseta', 180],
+      ['bajada', 30],
+      ['reposo', 420],
+    ],
+  },
   humo: {
     pico: 5000,
     stages: [
@@ -76,7 +96,7 @@ const PERFILES = {
   },
 };
 if (!PERFILES[PERFIL]) {
-  throw new Error(`PERFIL desconocido: ${PERFIL} (use completo o humo)`);
+  throw new Error(`PERFIL desconocido: ${PERFIL} (use completo, humo o kind)`);
 }
 
 function faseActual(transcurridoS) {
@@ -100,7 +120,7 @@ export const options = {
   scenarios: {
     cotizacion: {
       executor: 'ramping-arrival-rate',
-      startRate: 500,
+      startRate: PERFILES[PERFIL].stages[0].target,
       timeUnit: '1m',
       preAllocatedVUs: 300,
       maxVUs: MAX_VUS,

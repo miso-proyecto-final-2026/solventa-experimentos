@@ -155,7 +155,8 @@ def leer_muestreo(ruta: Path) -> dict:
     eventos = []
     for i in range(1, len(filas)):
         previo, fila = filas[i - 1], filas[i]
-        if fila["deseado"] <= previo["deseado"]:
+        # deseado = 0: el HPA aún no calculó réplicas (recién creado o sin métricas); no es un escalado.
+        if previo["deseado"] == 0 or fila["deseado"] <= previo["deseado"]:
             continue
         listo = next((r for r in filas[i:] if r["listos"] >= fila["deseado"]), None)
         eventos.append(

@@ -157,6 +157,20 @@ def test_ha03_evento_que_no_llega_a_las_replicas_pedidas_no_cumple_c1(tmp_path):
     )
 
 
+def test_ha03_el_hpa_sin_calcular_no_cuenta_como_escalado(tmp_path):
+    # Visto en kind: recién creado, el HPA reporta desiredReplicas = 0 hasta su primer cálculo.
+    filas = [("00:00", 0, 2, "", "0"), ("00:05", 0, 2, "", "0"), ("00:10", 2, 2, 3, "500m"), ("00:15", 2, 2, 3, "1")]
+    informe = correr(
+        "analizar-ha03.py",
+        k6_ha03(tmp_path / "ha03.json.gz"),
+        "--muestreo",
+        muestreo(tmp_path / "m.csv", filas),
+        tmp_path / "informe.json",
+    )
+    assert informe["escalado"]["eventos_escalado"] == []
+    assert informe["veredictos"]["c4 el HPA escala por solicitudes concurrentes"] == "sin eventos de escalado"
+
+
 def test_ha03_muestreo_solo_cpu_no_inventa_la_metrica(tmp_path):
     filas = [("00:00", 2, 2, 10, ""), ("00:05", 4, 2, 80, ""), ("00:10", 4, 4, 50, "")]
     informe = correr(
