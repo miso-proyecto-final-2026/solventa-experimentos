@@ -8,8 +8,9 @@ caída de una zona). Operador: la persona dueña de la cuenta de AWS. Ambiente: 
 > **Se despliega desde ramas sin fusionar (D10).** Primero el experimento y después los PRs: los de backend e infra se
 > abren (o vuelven a revisión) al cerrar la tarea, con la evidencia de esta sesión.
 >
-> **Nada de este runbook se ha ejecutado todavía.** Los scripts se validaron en local: sintaxis (`bash -n`, `node
-> --check`), `terraform validate` de `ec2-k6/` y los analizadores con datos sintéticos. Los tiempos y costos son
+> **Nada de este runbook se ha ejecutado todavía en AWS.** Los scripts se validaron en local: sintaxis (`bash -n`,
+> `node --check`), `terraform validate` de `ec2-k6/`, los analizadores con datos sintéticos (pytest) y la cadena
+> métrica → adaptador → HPA en kind, con k6, el muestreador y `analizar-ha03.py` (bitácora de HA03, 2026-10-25). Los tiempos y costos son
 > estimaciones a precio de lista de `us-east-1`; contrástalos con Cost Explorer al cerrar.
 
 ## Decisiones de la sesión
@@ -56,7 +57,7 @@ olvida el destroy: **≈ USD 16 por día**.
 
 ## 0. Antes de la sesión (sin costo)
 
-- [ ] Prueba en kind de la cadena app → Prometheus → adaptador → HPA terminada y anotada (bitácora de HA03).
+- [x] Prueba en kind de la cadena app → Prometheus → adaptador → HPA terminada y anotada (bitácora de HA03).
 - [ ] Ramas preparadas (D10), con el árbol limpio y los SHA anotados en `sesion.log`:
 
 ```sh
@@ -153,9 +154,9 @@ Notas de la prueba en kind:
 
 - El adaptador solo publica la métrica de los pods nuevos en su siguiente relist (~1 min). Si `get --raw` devuelve una
   lista vacía o el HPA muestra `<unknown>` justo después del apply, espera 1-2 min antes de declarar falla.
-- Si la consulta de pods `Succeeded` no queda vacía, el pod del Job de migración comparte la etiqueta del selector: el
-  HPA lo cuenta con concurrencia 0 (diluye el promedio) y, como no tiene request de CPU, la métrica de CPU queda en
-  `<unknown>`. Anótalo en `sesion.log` como desviación y no lances la carga hasta resolverlo (arreglo pendiente en infra).
+- La consulta de pods `Succeeded` debe quedar vacía. Si aparece un pod de migración, la rama de infra no trae el
+  arreglo de etiquetas (`app.kubernetes.io/name = <servicio>-migrate`): el HPA lo contaría con concurrencia 0 y, sin
+  request de CPU, dejaría la CPU en `<unknown>`. No lances la carga: revisa el SHA de infra anotado en `sesion.log`.
 
 Humo por túnel (desde tu máquina):
 
