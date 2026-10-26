@@ -2,7 +2,7 @@
 # Muestrea un servicio de staging durante HA03/HA04 (evidencia cruda, HA03 c7): réplicas del HPA, sus dos métricas
 # frente a sus objetivos (solicitudes en curso por pod y CPU, HA03 c4), pods listos y por zona, reinicios y CPU/memoria
 # por pod. Adaptado de ha01-ronda2 (paquete local de evidencia): añade `pods_listos` (para scaling_time_seconds),
-# `pods_por_zona` (HA04 c6) y las columnas de concurrencia (ADR-0014). Un HPA solo por CPU deja esas columnas vacías.
+# `pods_por_zona` (HA04 c6) y las columnas de concurrencia (ADR-0015). Un HPA solo por CPU deja esas columnas vacías.
 #
 # Uso:  cluster/muestrear-cluster.sh <salida.csv> [intervalo_s]   (Ctrl+C para detener)
 #       APP=solventa-identidad cluster/muestrear-cluster.sh identidad.csv 5

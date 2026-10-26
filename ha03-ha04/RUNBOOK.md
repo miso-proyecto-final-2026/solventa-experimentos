@@ -20,14 +20,14 @@ caída de una zona). Operador: la persona dueña de la cuenta de AWS. Ambiente: 
 | D1 | Desde dónde se opera | **Local**, con el perfil de AWS del operador. No se tocan las variables de GitHub: el CI sigue apuntando a la cuenta anterior |
 | D2 | ARN de administrador del clúster e IP del operador | Por `-var` en el plan; sin cambiar `staging.tfvars` |
 | D3 | Bus de eventos | `enable_events = true` (Suscripción y Siniestros no arrancan sin brokers) |
-| D4 | Métrica del HPA (HA03 c4) | **Solicitudes en curso por pod** (`http_requests_in_flight`), aprobado por Stiven (opción B): Prometheus mínimo + Prometheus Adapter + HPA nativo, con la CPU de respaldo (ADR-0014 de `solventa-backend`, en estado Propuesta). Subida abierta solo para Cotización: hasta el doble o +4 pods cada 15 s, sin estabilización |
+| D4 | Métrica del HPA (HA03 c4) | **Solicitudes en curso por pod** (`http_requests_in_flight`), aprobado por Stiven (opción B): Prometheus mínimo + Prometheus Adapter + HPA nativo, con la CPU de respaldo (ADR-0015 de `solventa-backend`, en estado Propuesta). Subida abierta solo para Cotización: hasta el doble o +4 pods cada 15 s, sin estabilización |
 | D5 | Ruta de la carga | k6 en una EC2 dentro de la VPC contra el **NLB interno** (NodePort). El borde (CloudFront, WAF, API Gateway) queda **fuera de la medición** |
 | D6 | Nodos | `node_count = 6` (t3.medium). Los nodos son **fijos**: no hay cluster-autoscaler, se declara |
 | D7 | Orden | HA03 primero; HA04 después en la misma sesión. **Corte:** si al terminar HA03 se pasó del tiempo, se destruye y HA04 va otro día |
 | D8 | Latencia del simulador de Open Finance | 200–500 ms, como el escenario A de HA01, para que la meta de RQ-L1 sea comparable. En staging el valor por defecto es 20–80 ms; se cambia con `kubectl set env` durante la sesión |
 | D9 | Perfil de carga de HA03 | 5 min a 500/min → subida a 50.000/min en 5 min → 10 min de meseta → bajada en 1 min → 8 min a 500/min. **Propuesta**: el issue no fija la forma |
 | D10 | Origen del despliegue | **Ramas, sin fusionar.** Imagen de Cotización (y de los demás servicios) construida desde `feature/HA03-metrica-solicitudes-en-curso` de `solventa-backend` (borrador solventa-backend#44). Infra aplicada desde una rama **local** `sesion/HA03-HA04-local` = `feature/HA03-hpa-solicitudes-concurrentes` + `infra/HA04-dispersion-donotschedule` (solventa-infra#18), que no se sube. Se anotan los SHA exactos |
-| D11 | Objetivo de concurrencia | **3 por pod** de partida (estimación por la ley de Little). Se recalibra con el humo (paso 6.3) antes de la corrida completa; el valor usado queda en `sesion.log` y en el ADR-0014 |
+| D11 | Objetivo de concurrencia | **3 por pod** de partida (estimación por la ley de Little). Se recalibra con el humo (paso 6.3) antes de la corrida completa; el valor usado queda en `sesion.log` y en el ADR-0015 |
 
 ## Costo y duración estimados
 
@@ -40,11 +40,11 @@ caída de una zona). Operador: la persona dueña de la cuenta de AWS. Ambiente: 
 | Redis con réplica (2 × t4g.micro) | 0,03 |
 | MSK (2 × kafka.t3.small) | 0,09 |
 | NLB, WAF, CloudFront en reposo | 0,03 |
-| Generador `c5.large` + 30 GB gp3 | 0,09 |
-| **Total encendido** | **≈ 0,67** |
+| Generador `c5.xlarge` + 30 GB gp3 | 0,17 |
+| **Total encendido** | **≈ 0,75** |
 
 Sesión completa: **4,5–6 h, unos USD 4–7** (más transferencia por el NAT y el uso de ráfaga de CPU de las t3). Si se
-olvida el destroy: **≈ USD 16 por día**.
+olvida el destroy: **≈ USD 18 por día**.
 
 ## Convenciones
 
@@ -72,8 +72,10 @@ echo "backend $(git -C ../solventa-backend rev-parse HEAD)  infra $(git rev-pars
 ```
 
   La rama `sesion/HA03-HA04-local` **no se sube** (`git push` no): solo existe para aplicar las dos ramas juntas.
-- [ ] Docker Desktop corriendo; `kubectl` ≥ 1.34 (el clúster es 1.35); `terraform` ≥ 1.10; AWS CLI v2.
-- [ ] Cuota de vCPU `L-1216C47A` ≥ 16 (se usan 14: 6 nodos + generador).
+- [ ] Docker Desktop corriendo; `kubectl` ≥ 1.34 (el clúster es 1.35); `terraform` ≥ 1.10; AWS CLI v2. Ojo: Docker
+      Desktop pone su propio `kubectl` (1.32) primero en el `PATH`; comprueba con `kubectl version --client` y, si
+      hace falta, antepón el de winget o chocolatey.
+- [ ] Cuota de vCPU `L-1216C47A` ≥ 16 (se usan 16: 6 nodos de 2 vCPU + generador de 4).
 - [ ] Credenciales limpias y perfil fijado:
 
 ```sh
@@ -86,15 +88,22 @@ MI_IP=$(curl -s https://checkip.amazonaws.com)
 
 ## 1. Bootstrap (≈ 10 min, una vez por cuenta)
 
+El bloque `backend "s3"` de `bootstrap/versions.tf` ya viene **activo** en el repo, así que en una cuenta nueva
+`init` falla con `The attribute "bucket" is required by the backend` (el bucket aún no existe). El primer apply se hace
+con estado local mediante un `override.tf`, que `.gitignore` ya ignora (corrección de la sesión del 2026-10-25):
+
 ```sh
+printf 'terraform {\n  backend "local" {}\n}\n' > bootstrap/override.tf
 terraform -chdir=bootstrap init
 terraform -chdir=bootstrap plan -out=bootstrap.tfplan      # revisa: solo `+`
 terraform -chdir=bootstrap apply bootstrap.tfplan
 STATE_BUCKET=$(terraform -chdir=bootstrap output -raw state_bucket)
 ```
 
-- Migra el estado al bucket: descomenta el bloque `backend "s3"` de `bootstrap/versions.tf` **sin commitear** y
-  `terraform -chdir=bootstrap init -migrate-state -backend-config="bucket=$STATE_BUCKET" -backend-config="region=us-east-1"`.
+- Migra el estado al bucket: borra `bootstrap/override.tf` y `bootstrap/bootstrap.tfplan` y ejecuta
+  `terraform -chdir=bootstrap init -migrate-state -force-copy -backend-config="bucket=$STATE_BUCKET" -backend-config="region=us-east-1"`.
+  Comprueba con `terraform -chdir=bootstrap plan` (debe decir `No changes`) y borra el `bootstrap/terraform.tfstate`
+  local que queda.
 - `cp environments/staging/backend.hcl.example environments/staging/backend.hcl` y completa `bucket = "$STATE_BUCKET"`.
 - El bootstrap **no se destruye** al final: no cuesta y evita repetir esto.
 
@@ -127,10 +136,28 @@ aws ecr get-login-password | docker login --username AWS --password-stdin "$REGI
 for par in cotizacion:solventa-backend identidad:solventa-identidad perfilamiento:solventa-perfilamiento \
            suscripcion:solventa-suscripcion siniestros:solventa-siniestros; do
   carpeta=${par%%:*}; servicio=${par##*:}
-  docker build --platform linux/amd64 -t "$REGISTRY/$servicio:$SHA" "../solventa-backend/services/$carpeta" \
+  docker build --platform linux/amd64 --provenance=false --sbom=false \
+    -t "$REGISTRY/$servicio:$SHA" "../solventa-backend/services/$carpeta" \
     && docker push "$REGISTRY/$servicio:$SHA"
 done
 ```
+
+**`--provenance=false --sbom=false` es obligatorio desde Docker Desktop** (corrección de la sesión del 2026-10-25).
+Con el almacén de imágenes de containerd, BuildKit genera un índice OCI con una atestación de procedencia. Como los
+repositorios ECR son `IMMUTABLE`, el primer manifiesto subido se queda con la etiqueta y el resto falla con
+`PUT .../manifests/<SHA>: 400 Bad Request`. La etiqueta queda apuntando a la atestación (≈ 1,4 KB, no ejecutable). Si
+pasa, borra los objetos del repositorio (`aws ecr list-images` + `aws ecr batch-delete-image --image-ids imageDigest=...`),
+reconstruye con los dos flags y vuelve a subir. El CI (`docker build` en Ubuntu) no tiene este problema.
+
+Verifica que cada etiqueta sea un manifiesto de imagen y no un índice ni una atestación:
+
+```sh
+aws ecr batch-get-image --repository-name solventa-backend --image-ids imageTag=$SHA \
+  --query 'images[0].imageManifest' --output text | grep -o '"mediaType": *"[^"]*"' | head -2
+# application/vnd.docker.distribution.manifest.v2+json (o application/vnd.oci.image.manifest.v1+json), sin in-toto
+```
+
+En ECR el tamaño es el **comprimido** (unos 76–94 MB por imagen); en local, `docker images` muestra 330–383 MB.
 
 ## 4. Baseline y humo (≈ 15 min)
 
@@ -193,6 +220,11 @@ python3 sembrar-clientes.py --url http://<NLB>:30081 --n 1000 --salida clientes.
 
 Anota la AZ del generador y la de cada réplica de Cotización (HA03 c2 / HA01: «dónde se mide»).
 
+Si en vez de una sesión interactiva usas `aws ssm send-command` (como en la sesión del 2026-10-25), pasa
+`executionTimeout` mayor que la corrida (`--parameters 'executionTimeout=["5400"],commands=[...]'`): el valor por
+defecto de `AWS-RunShellScript` es 3600 s y corta k6 y la subida a S3 en las corridas de 60 min o más. En Windows,
+exporta `PYTHONUTF8=1` para que la AWS CLI no falle al imprimir los símbolos de k6.
+
 ## 6. HA03 — autoescalado (≈ 60–75 min)
 
 1. **Latencia del simulador (D8)** y caché fría:
@@ -224,6 +256,11 @@ Anota la AZ del generador y la de cada réplica de Cotización (HA03 c2 / HA01: 
    (`concurrent_requests_target`), vuelve a planear el baseline (solo debe cambiar el HPA de `solventa-backend`),
    aplícalo y anota en `sesion.log` el valor, la cuenta y la hora. **Es una extrapolación**: si en la corrida completa
    el HPA llega al máximo sin que la latencia mejore, el límite es la capacidad (D6), no el objetivo.
+
+   Notas de la sesión del 2026-10-25: el plan del baseline **también quita las variables de D8** que se pusieron con
+   `kubectl set env` (y `-target` al HPA arrastra el Deployment): tras aplicarlo, vuelve a fijarlas y espera a que el HPA
+   baje a 2 (el arranque sube la CPU y lo escala; ~9 min). Antes de la completa, revisa que la base aguante las
+   conexiones de 10 réplicas (cada pod abre hasta 15; con `db.t4g.micro` se agotan, ver ADR-0015).
 4. **Completa (29 min):** detén el muestreo, vuelve a vaciar la caché, arranca un muestreo nuevo
    (`resultados/ha03-completo-muestreo.csv`) y en la EC2: `./correr-escenario.sh ha03 completo http://<NLB>:30080`.
 5. Al terminar: detén el muestreo y guarda la evidencia del clúster: `cluster/eventos-cluster.sh resultados/ha03-cluster`.
@@ -236,7 +273,9 @@ Anota la AZ del generador y la de cada réplica de Cotización (HA03 c2 / HA01: 
 ## 7. HA04 — caída de zona (≈ 60–90 min)
 
 1. Tráfico constante en la EC2 (10 solicitudes/s; cada cliente_id es único para el conteo de RPO):
-   `./correr-escenario.sh ha04 90m http://<NLB>:30080 10`.
+   `./correr-escenario.sh ha04 90m http://<NLB>:30080 10`. Antes de cada falla, revisa que el gauge
+   `http_requests_in_flight` de Cotización esté cerca de 0 en todos los pods: en la sesión del 2026-10-25 un pod quedó
+   colgado tras el failover de RDS (siguió `Ready`) e infló el HPA hasta que se borró a mano (informe de HA04).
 2. Muestreo en tu máquina: `cluster/muestrear-cluster.sh resultados/ha04-muestreo.csv 5` (y uno por servicio crítico
    si quieres más detalle: `APP=solventa-identidad ...`).
 3. Inyecta las fallas **una a la vez**, dejando que se recupere antes de la siguiente, y anota cada inicio en
@@ -299,7 +338,7 @@ scripts/verificar-teardown.sh us-east-1                          # debe salir co
 
 ## Desviaciones que se declaran en los informes
 
-- HA03 c4: objetivo de concurrencia calibrado con el humo, extrapolando por la ley de Little (D11); el ADR-0014 sigue
+- HA03 c4: objetivo de concurrencia calibrado con el humo, extrapolando por la ley de Little (D11); el ADR-0015 sigue
   en Propuesta hasta esta medición.
 - Despliegue desde ramas sin fusionar (D10), con los SHA anotados; los PRs se abren al cierre con esta evidencia.
 - `/metrics` no se publica por el borde, pero dentro de la VPC es alcanzable por el NodePort y el Service (mismo
