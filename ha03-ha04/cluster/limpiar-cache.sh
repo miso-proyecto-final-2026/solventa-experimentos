@@ -30,9 +30,15 @@ spec:
         - sh
         - -c
         - |
-          echo "claves antes: \$(redis-cli --tls -u "\$REDIS_URL" DBSIZE)"
-          redis-cli --tls -u "\$REDIS_URL" FLUSHDB
-          echo "claves después: \$(redis-cli --tls -u "\$REDIS_URL" DBSIZE)"
+          set -e
+          # redis-cli 7.4 con -u y usuario vacío en la URL se autentica con el usuario "" (WRONGPASS);
+          # ElastiCache espera el usuario default. redis-py (la app) no tiene ese problema.
+          URL="\$(echo "\$REDIS_URL" | sed 's#^\(rediss*\)://:#\1://default:#')"
+          echo "claves antes: \$(redis-cli --tls -u "\$URL" DBSIZE)"
+          [ "\$(redis-cli --tls -u "\$URL" FLUSHDB)" = "OK" ] || { echo "FLUSHDB falló"; exit 1; }
+          despues="\$(redis-cli --tls -u "\$URL" DBSIZE)"
+          echo "claves después: \$despues"
+          [ "\$despues" = "0" ]
 EOF
 
 kubectl -n "$NS" wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$POD" --timeout=120s \
