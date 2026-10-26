@@ -10,9 +10,9 @@ variable "vpc_name" {
 }
 
 variable "instance_type" {
-  description = "c5.large: 2 vCPU dedicadas, sin créditos de CPU que se agoten a mitad de corrida"
+  description = "c5.xlarge: 4 vCPU dedicadas, sin créditos de CPU que se agoten a mitad de corrida"
   type        = string
-  default     = "c5.large"
+  default     = "c5.xlarge"
 }
 
 variable "volume_gb" {

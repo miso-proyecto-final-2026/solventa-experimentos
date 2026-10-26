@@ -12,7 +12,7 @@ Cómo se ejecuta la sesión (despliegue, experimentos y destroy): [`RUNBOOK.md`]
 | Carpeta | Contenido |
 |---|---|
 | `scripts/` | `ha03-autoescalado.js` (k6, rampa a 50.000/min con fases etiquetadas), `ha04-trafico.js` (k6, tráfico constante con un cliente_id único por solicitud), `analizar-ha03.py` (percentiles por fase, `scaling_time_seconds` y qué métrica disparó cada escalado, desde el muestreo) y `analizar-ha04.py` (disponibilidad, recuperación por falla y lista de confirmadas para el RPO). |
-| `ec2-k6/` | Terraform del generador: una `c5.large` en una subred privada de la VPC de staging, sin SSH ni IP pública (SSM), con un bucket temporal para scripts y evidencia. Estado local: vive solo durante la sesión. `correr-escenario.sh` corre una carga y sube el crudo. |
+| `ec2-k6/` | Terraform del generador: una `c5.xlarge` en una subred privada de la VPC de staging, sin SSH ni IP pública (SSM), con un bucket temporal para scripts y evidencia. Estado local: vive solo durante la sesión. `correr-escenario.sh` corre una carga y sube el crudo. |
 | `cluster/` | `muestrear-cluster.sh` (HPA con sus dos métricas frente a sus objetivos —solicitudes en curso por pod y CPU—, pods listos y por zona, CPU y memoria cada 5 s), `eventos-cluster.sh` (eventos, HPA, pods y nodos al cerrar) y `limpiar-cache.sh` (vacía la caché de Cotización). |
 
 La siembra de clientes con consentimiento reutiliza `../ha01-ronda2/seed/sembrar-clientes.py`.
