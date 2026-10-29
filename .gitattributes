@@ -1,0 +1,3 @@
+# Los scripts se ejecutan en Linux (EC2, contenedores, Git Bash): siempre LF, aunque core.autocrlf=true.
+*.sh     text eol=lf
+*.tftpl  text eol=lf

@@ -1,0 +1,22 @@
+#!/bin/bash
+# Prepara el generador: k6 fijado por versión, Python 3 y los scripts de HA03/HA04 en /opt/ha03.
+set -euxo pipefail
+dnf install -y python3 tar gzip
+cd /tmp
+curl -fsSLO "https://github.com/grafana/k6/releases/download/v${k6_version}/k6-v${k6_version}-linux-amd64.tar.gz"
+tar xzf "k6-v${k6_version}-linux-amd64.tar.gz"
+install -m 0755 "k6-v${k6_version}-linux-amd64/k6" /usr/local/bin/k6
+
+mkdir -p /opt/ha03/results
+aws s3 cp --recursive "s3://${bucket}/scripts/" /opt/ha03/
+# Por si un script se subió con CRLF desde Windows: bash no los ejecuta.
+find /opt/ha03 -maxdepth 1 \( -name '*.sh' -o -name '*.py' \) -exec sed -i 's/\r$//' {} +
+chmod +x /opt/ha03/correr-escenario.sh
+echo "BUCKET=${bucket}" > /opt/ha03/entorno
+chmod -R a+rwX /opt/ha03
+
+# Margen para miles de conexiones nuevas por minuto (noConnectionReuse).
+printf 'net.ipv4.ip_local_port_range = 1024 65535\nnet.ipv4.tcp_tw_reuse = 1\n' > /etc/sysctl.d/90-k6.conf
+sysctl --system
+echo '* - nofile 65535' > /etc/security/limits.d/90-k6.conf
+touch /opt/ha03/LISTO
