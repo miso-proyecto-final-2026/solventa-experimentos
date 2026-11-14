@@ -11,7 +11,7 @@ mkdir -p /opt/ha03/results
 aws s3 cp --recursive "s3://${bucket}/scripts/" /opt/ha03/
 # Por si un script se subió con CRLF desde Windows: bash no los ejecuta.
 find /opt/ha03 -maxdepth 1 \( -name '*.sh' -o -name '*.py' \) -exec sed -i 's/\r$//' {} +
-chmod +x /opt/ha03/correr-escenario.sh
+chmod +x /opt/ha03/*.sh
 echo "BUCKET=${bucket}" > /opt/ha03/entorno
 chmod -R a+rwX /opt/ha03
 
