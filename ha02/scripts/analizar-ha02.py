@@ -8,6 +8,16 @@ Entradas (todas opcionales salvo --perfilamiento; un criterio sin su evidencia q
   --redis          JSON de cluster/claves-redis.sh (claves de los clientes revocados que siguen en Redis).
   --db             JSON de cluster/consultas-db.sh (intentos bloqueados y perfiles en la base).
   --muestreo       servicio=archivo.csv de muestrear-cluster.sh (repetible): réplicas, CPU, memoria y reinicios.
+  --sin-datos-por-tiempo  escenarios que no se corrieron por falta de tiempo en la sesión: quedan `sin_datos` con
+                   ese motivo (no `no_cumple`), y el criterio que los exige queda `sin_datos`.
+  --avisos         líneas WARNING/ERROR de los pods de Perfilamiento («<pod> <hora> <json>», como las guarda el
+                   recolector de la sesión): atribuye la causa de los falsos bloqueos por escenario.
+
+Falsos bloqueos (aparte de los criterios): un 403 a un cliente CON consentimiento. Perfilamiento falla cerrado: si
+Identidad no responde (`identidad_no_disponible`, p. ej., ReadTimeout), responde 5xx o el circuito está abierto, trata
+al cliente como sin consentimiento y devuelve el mismo 403 `CONSENTIMIENTO_NO_VIGENTE`. No son errores por saturación
+(no entran en `errores_saturacion` ni en c2) y se informan por escenario con su frecuencia. Con el circuito abierto no
+se escribe ningún aviso, así que los avisos pueden ser menos que los falsos bloqueos.
 
 Veredicto por criterio del issue #43:
   c1  p95 <= 400 ms y p99 <= 800 ms en miss, hit y lenta_4a (solo clientes con consentimiento).
@@ -29,7 +39,7 @@ Uso:
     python -I analizar-ha02.py --perfilamiento r1/perfilamiento.json.gz r2/perfilamiento.json.gz ... \\
         --cotizacion meseta/cotizacion.json.gz --revocacion revocacion.json --redis redis.json --db db.json \\
         --muestreo perfilamiento=perf.csv --muestreo cotizacion=cot.csv --muestreo identidad=iden.csv \\
-        --salida informe-ha02.json
+        --avisos logs-avisos/perfilamiento-avisos.log --salida informe-ha02.json
 
 Solo biblioteca estándar; lee el crudo línea a línea. Percentiles con interpolación lineal (como HA01 y HA03).
 """
@@ -43,7 +53,7 @@ import json
 import math
 import re
 from collections import defaultdict
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 METAS = {
@@ -112,6 +122,7 @@ def leer_perfilamiento(rutas: list[Path]) -> dict:
     descartadas: dict[str, int] = defaultdict(int)
     agotados: dict[str, int] = defaultdict(int)
     ventana: dict[str, list[float]] = {}
+    solicitudes: dict[str, list[float]] = {}
     for ruta in rutas:
         for metrica, data in puntos(ruta):
             tags = data.get("tags") or {}
@@ -127,8 +138,10 @@ def leer_perfilamiento(rutas: list[Path]) -> dict:
                 dur[(esc, cons)].append(valor)
                 estado = tags.get("status", "?")
                 estados[(esc, cons)][estado] += 1
+                t = instante(data["time"])
+                s = solicitudes.setdefault(esc, [t, t])
+                s[0], s[1] = min(s[0], t), max(s[1], t)
                 if cons == "si" and estado == "201":
-                    t = instante(data["time"])
                     v = ventana.setdefault(esc, [t, t])
                     v[0], v[1] = min(v[0], t), max(v[1], t)
             elif metrica == "errores_saturacion":
@@ -156,8 +169,71 @@ def leer_perfilamiento(rutas: list[Path]) -> dict:
             info["estados_sin_consentimiento"] = dict(estados[(esc, "no")])
         if esc in ventana:
             info["ventana_201_s"] = round(ventana[esc][1] - ventana[esc][0], 1)
+        if esc in solicitudes:
+            info["ventana_solicitudes_utc"] = [
+                datetime.fromtimestamp(t, UTC).isoformat(timespec="seconds") for t in solicitudes[esc]
+            ]
         escenarios[esc] = info
     return escenarios
+
+
+_AVISO = re.compile(r"^(\S+) (\S+) (\{.*\})\s*$")
+
+
+def leer_avisos(ruta: Path, esc: dict) -> dict:
+    """Cuenta los avisos de Identidad de Perfilamiento por escenario, según la ventana de solicitudes de k6 (±5 s)."""
+    ventanas = {
+        e: (instante(i["ventana_solicitudes_utc"][0]) - 5, instante(i["ventana_solicitudes_utc"][1]) + 5)
+        for e, i in esc.items()
+        if "ventana_solicitudes_utc" in i
+    }
+    cuenta: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    vistos: set[str] = set()
+    with abrir(ruta) as f:
+        for linea in f:
+            m = _AVISO.match(linea)
+            if not m or linea in vistos:
+                continue
+            vistos.add(linea)
+            try:
+                mensaje = json.loads(m.group(3)).get("message", "")
+            except json.JSONDecodeError:
+                continue
+            if not mensaje.startswith("identidad_"):
+                continue
+            t = instante(m.group(2))
+            esc_aviso = next((e for e, (a, b) in ventanas.items() if a <= t <= b), "fuera_de_escenarios")
+            cuenta[esc_aviso][mensaje] += 1
+    return {e: dict(v) for e, v in sorted(cuenta.items())}
+
+
+def falsos_bloqueos(esc: dict, avisos: dict | None) -> dict:
+    """403 a clientes con consentimiento, por escenario y con su frecuencia; separados de la saturación."""
+    por_escenario = {}
+    for e, info in esc.items():
+        estados = info["estados_con_consentimiento"]
+        total = sum(estados.values())
+        n = estados.get("403", 0)
+        por_escenario[e] = {
+            "falsos_bloqueos": n,
+            "solicitudes_con_consentimiento": total,
+            "frecuencia": round(n / total, 6) if total else None,
+            "errores_saturacion": info["errores_saturacion"],
+        }
+        if avisos is not None:
+            por_escenario[e]["avisos_identidad"] = avisos.get(e, {})
+    total_fb = sum(v["falsos_bloqueos"] for v in por_escenario.values())
+    total_si = sum(v["solicitudes_con_consentimiento"] for v in por_escenario.values())
+    return {
+        "definicion": "403 a un cliente con consentimiento: Perfilamiento falla cerrado si Identidad no responde "
+        "(identidad_no_disponible), responde 5xx o tiene el circuito abierto. No son errores por saturación.",
+        "total": total_fb,
+        "solicitudes_con_consentimiento": total_si,
+        "frecuencia": round(total_fb / total_si, 6) if total_si else None,
+        "por_escenario": por_escenario,
+        "avisos_fuera_de_escenarios": (avisos or {}).get("fuera_de_escenarios"),
+        "nota": None if avisos is not None else "sin --avisos: la causa no se atribuye con los logs",
+    }
 
 
 def leer_cotizacion(ruta: Path) -> dict:
@@ -239,7 +315,8 @@ def solo_201(estados: dict) -> bool:
     return bool(estados) and set(estados) == {"201"}
 
 
-def criterios(esc: dict, cot: dict | None, rev: dict | None, redis: dict | None, db: dict | None) -> dict:
+def criterios(esc: dict, cot: dict | None, rev: dict | None, redis: dict | None, db: dict | None,
+              omitidos: frozenset[str] = frozenset()) -> dict:
     c: dict = {}
 
     por_escenario = {e: dentro_de_latencia(esc.get(e, {}).get("con_consentimiento", {})) for e in LATENCIA}
@@ -296,6 +373,8 @@ def criterios(esc: dict, cot: dict | None, rev: dict | None, redis: dict | None,
         info = esc.get(e)
         if not info:
             detalle4[e] = {"veredicto": "sin_datos"}
+            if e in omitidos:
+                detalle4[e]["motivo"] = "sin datos por tiempo"
             valores4.append(None)
             continue
         ok = solo_201(info["estados_con_consentimiento"]) and bool(
@@ -330,6 +409,8 @@ def criterios(esc: dict, cot: dict | None, rev: dict | None, redis: dict | None,
             "veredicto": veredicto(cumple5),
             "estados_por_escenario": bloqueos,
             "total_403_k6": total_403,
+            # Si la base también registra los falsos bloqueos como intentos, la diferencia con la base es esta cifra.
+            "falsos_bloqueos_k6": sum(i["estados_con_consentimiento"].get("403", 0) for i in esc.values()),
             "base": db,
             "evidencia": "indirecta: intentos bloqueados en la base y ningún perfil de esos clientes (sin contador)",
         }
@@ -361,6 +442,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--redis", type=Path)
     ap.add_argument("--db", type=Path)
     ap.add_argument("--muestreo", action="append", default=[], metavar="SERVICIO=CSV")
+    ap.add_argument("--avisos", type=Path)
+    ap.add_argument("--sin-datos-por-tiempo", nargs="+", default=[], metavar="ESCENARIO")
     ap.add_argument("--salida", type=Path, default=Path("informe-ha02.json"))
     args = ap.parse_args(argv)
 
@@ -374,7 +457,13 @@ def main(argv: list[str] | None = None) -> int:
             ap.error(f"--muestreo espera servicio=archivo.csv, no {par}")
         muestreo[servicio] = leer_muestreo(Path(ruta))
 
-    resultado = criterios(esc, cot, leer_json(args.revocacion), leer_json(args.redis), leer_json(args.db))
+    omitidos = frozenset(args.sin_datos_por_tiempo)
+    con_datos = sorted(omitidos & set(esc))
+    if con_datos:
+        ap.error(f"--sin-datos-por-tiempo incluye escenarios que sí tienen datos: {', '.join(con_datos)}")
+    resultado = criterios(
+        esc, cot, leer_json(args.revocacion), leer_json(args.redis), leer_json(args.db), omitidos
+    )
     resultado["c7_evidencia"] = {
         "veredicto": veredicto(bool(muestreo) or None),
         "muestreo": muestreo,
@@ -384,12 +473,15 @@ def main(argv: list[str] | None = None) -> int:
             "revocacion": str(args.revocacion) if args.revocacion else None,
             "redis": str(args.redis) if args.redis else None,
             "db": str(args.db) if args.db else None,
+            "avisos": str(args.avisos) if args.avisos else None,
         },
     }
-    informe = {"metas": METAS, "criterios": resultado, "escenarios": esc, "cotizacion": cot}
+    fb = falsos_bloqueos(esc, leer_avisos(args.avisos, esc) if args.avisos else None)
+    informe = {"metas": METAS, "escenarios_sin_datos_por_tiempo": sorted(omitidos), "criterios": resultado, "falsos_bloqueos": fb, "escenarios": esc, "cotizacion": cot}
     args.salida.write_text(json.dumps(informe, indent=2, ensure_ascii=False), encoding="utf-8")
     for nombre, valor in resultado.items():
         print(f"{nombre:<22} {valor['veredicto']}")
+    print(f"{'falsos_bloqueos':<22} {fb['total']} de {fb['solicitudes_con_consentimiento']} (aparte de la saturación)")
     print(f"Informe en {args.salida}")
     return 0
 

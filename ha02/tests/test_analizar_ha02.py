@@ -222,3 +222,69 @@ def test_c7_resume_el_muestreo_por_servicio(tmp_path):
     assert c["veredicto"] == "cumple"
     assert (m["replicas_max"], m["cpu_total_m_max"], m["mem_total_mi_max"]) == (3, 900, 420)
     assert m["reinicios_en_ventana"] == 1
+
+
+def informe(tmp: Path, *argumentos: str | Path) -> dict:
+    salida = tmp / "informe-completo.json"
+    subprocess.run([sys.executable, "-I", str(SCRIPT), *map(str, argumentos), "--salida", str(salida)],
+                   check=True, capture_output=True)
+    return json.loads(salida.read_text(encoding="utf-8"))
+
+
+def aviso(segundos: float, mensaje: str, pod: str = "solventa-perfilamiento-x") -> str:
+    hora = (T0 + timedelta(seconds=segundos)).strftime("%Y-%m-%dT%H:%M:%S.%f") + "945Z"  # como kubectl --timestamps
+    cuerpo = json.dumps({"level": "WARNING", "message": mensaje, "logger": "x"})
+    return f"{pod} {hora} {cuerpo}"
+
+
+def test_falsos_bloqueos_se_cuentan_por_escenario_y_aparte_de_la_saturacion(tmp_path):
+    # meseta: 98 de 100 con consentimiento respondieron 201 y 2 recibieron 403 (Identidad no respondió);
+    # los 403 de los clientes sin consentimiento son bloqueos legítimos y no cuentan.
+    lineas = solicitudes("meseta", rapidas(98)) + solicitudes("meseta", [30.0, 31.0], status="403")
+    lineas += solicitudes("meseta", [20.0] * 5, status="403", consentimiento="no")
+    lineas += [punto("errores_saturacion", 1, {"escenario": "meseta"})]
+    lineas += solicitudes("hit", rapidas(50))
+    r = informe(tmp_path, "--perfilamiento", escribir(tmp_path, "f", lineas))
+    fb = r["falsos_bloqueos"]
+    assert fb["total"] == 2 and fb["solicitudes_con_consentimiento"] == 150
+    meseta = fb["por_escenario"]["meseta"]
+    assert (meseta["falsos_bloqueos"], meseta["frecuencia"], meseta["errores_saturacion"]) == (2, 0.02, 1)
+    assert fb["por_escenario"]["hit"]["falsos_bloqueos"] == 0
+    assert r["criterios"]["c2_rendimiento"]["errores_saturacion"] == 1  # la saturación no suma los falsos bloqueos
+    assert r["criterios"]["c5_consentimiento"]["falsos_bloqueos_k6"] == 2
+    assert "sin --avisos" in fb["nota"]
+
+
+def test_falsos_bloqueos_atribuyen_los_avisos_de_identidad_a_su_escenario(tmp_path):
+    # miss entre 0 y 99 s; caida_5a de 1000 a 1099 s (k6 escribe la hora en -05:00, kubectl en UTC).
+    lineas = solicitudes("miss", rapidas(99)) + solicitudes("miss", [30.0], status="403")
+    lineas += [punto("http_req_duration", 50.0, {"escenario": "caida_5a", "consentimiento": "si", "status": "201"},
+                     1000 + i) for i in range(100)]
+    avisos = tmp_path / "avisos.log"
+    avisos.write_text("\n".join([
+        aviso(10, "identidad_no_disponible error=ReadTimeout"),
+        aviso(10, "identidad_no_disponible error=ReadTimeout"),  # duplicado de dos lecturas: se cuenta una vez
+        aviso(1050, "identidad_respuesta_5xx status=503"),
+        aviso(1050, "open_finance_degradado fuente=x"),  # no es de Identidad
+        aviso(5000, "identidad_no_disponible error=ConnectTimeout"),
+    ]) + "\n", encoding="utf-8")
+    fb = informe(tmp_path, "--perfilamiento", escribir(tmp_path, "a", lineas), "--avisos", avisos)["falsos_bloqueos"]
+    assert fb["por_escenario"]["miss"]["avisos_identidad"] == {"identidad_no_disponible error=ReadTimeout": 1}
+    assert fb["por_escenario"]["caida_5a"]["avisos_identidad"] == {"identidad_respuesta_5xx status=503": 1}
+    assert fb["avisos_fuera_de_escenarios"] == {"identidad_no_disponible error=ConnectTimeout": 1}
+    assert fb["nota"] is None
+
+
+def test_escenarios_omitidos_por_tiempo_quedan_sin_datos_con_su_motivo(tmp_path):
+    k6 = escribir(tmp_path, "o", solicitudes("lenta_4a", rapidas()) + solicitudes("caida_5a", rapidas(), marcado=1.0))
+    r = informe(tmp_path, "--perfilamiento", k6, "--sin-datos-por-tiempo", "lenta_4b", "caida_5b")
+    c4 = r["criterios"]["c4_degradacion"]
+    assert c4["veredicto"] == "sin_datos"
+    assert c4["por_escenario"]["caida_5a"]["veredicto"] == "cumple"
+    for e in ("lenta_4b", "caida_5b"):
+        assert c4["por_escenario"][e] == {"veredicto": "sin_datos", "motivo": "sin datos por tiempo"}
+    assert r["escenarios_sin_datos_por_tiempo"] == ["caida_5b", "lenta_4b"]
+    # Un escenario con datos no puede declararse omitido.
+    falla = subprocess.run([sys.executable, "-I", str(SCRIPT), "--perfilamiento", str(k6),
+                            "--sin-datos-por-tiempo", "caida_5a"], capture_output=True)
+    assert falla.returncode != 0
