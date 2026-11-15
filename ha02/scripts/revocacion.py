@@ -32,7 +32,7 @@ import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 TIPO = "OPEN_FINANCE_OPEN_DATA"
 TIMEOUT_S = 10
@@ -57,7 +57,7 @@ def http(metodo: str, url: str, cuerpo: dict | None = None, cabeceras: dict | No
 
 
 def ahora_utc() -> str:
-    return datetime.now(UTC).isoformat(timespec="milliseconds")
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
 def preparar(identidad: str, perfilamiento: str, clave: str, run: str, i: int) -> tuple[str, str]:
