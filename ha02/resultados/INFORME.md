@@ -5,7 +5,8 @@
 **Fuente de las cifras:** `informe-ha02.json`, la salida de `scripts/analizar-ha02.py` sobre la evidencia cruda.
 
 **Evidencia cruda:** k6, muestreo con `kubectl`, eventos del clúster, consultas a la base, Redis y avisos de los logs.
-Está en el paquete de evidencia de la sesión, fuera de git, junto con `sesion.log` con las horas UTC.
+Está en el paquete de evidencia de la sesión, fuera de git, junto con `sesion.log` con las horas UTC. Las métricas
+de la RDS en CloudWatch, consultadas después del destroy, sí van en git: `cloudwatch-rds-por-minuto.csv`.
 
 Las decisiones que se derivan van en el ADR-0024 de `solventa-backend`.
 
@@ -147,9 +148,9 @@ Series por minuto de la meseta (crudo de k6):
   se abre el breaker, y durante 15 s todo sale bloqueado (Perfilamiento) o aproximado (Cotización). Eso explica las
   ráfagas de ~100 y la diferencia entre avisos y falsos bloqueos.
 
-### Dependencia compartida: la RDS `db.t4g.micro` (hipótesis fuerte, sin verificar con métricas de RDS)
+### Dependencia compartida: la RDS `db.t4g.micro` (verificada con CloudWatch: el ciclo sigue como hipótesis)
 
-**A favor:**
+**Por qué se sospechó de ella:**
 - **Es la única base de todos los servicios.**
   - En cada consulta de consentimiento, Identidad hace 3 viajes a la base: `pool_pre_ping`, `Cliente` y
     `Consentimiento`.
@@ -163,21 +164,46 @@ Series por minuto de la meseta (crudo de k6):
   Identidad dejó 9.741 `ReadTimeout` en Cotización. Con `db.t4g.medium`, el humo 2 de HA03 no tuvo fallos y las
   aproximadas bajaron de 27,4 % a 0,04 %. Staging volvió a `db.t4g.micro` (`staging.tfvars`).
 
+**Verificación con CloudWatch** (solo lectura, 16:30–19:50 UTC, resolución de 1 min; créditos cada 5 min). La serie
+completa está en `resultados/cloudwatch-rds-por-minuto.csv`:
+
+| Ventana (UTC) | CPU máx. | Conexiones máx. | Créditos mín. | Latencia lectura / escritura máx. | Memoria libre mín. | Swap |
+|---|---|---|---|---|---|---|
+| Siembra (16:30–16:41) | 17,7 % | 68 | 7,8 | 1,0 / 4,8 ms | 55 MB | 14 → 41 MB |
+| Escenarios previos (16:42–17:42) | 10,4 % | 51 | 7,9 | 1,8 / 28,9 ms | 70 MB | 37–43 MB |
+| Línea base de Cotización y meseta (17:43–18:54) | 42,1 % | 59 | 4,0 | 4,0 / 3,3 ms | 54 MB | 43 → 230 MB |
+| Después (18:55–19:50) | 19,9 % | 49 | 3,2 | 1,8 / 13,3 ms | 52 MB | 153–205 MB |
+
+`DiskQueueDepth` no pasó de 0,13 y `WriteIOPS` de ~50 en toda la ventana.
+
+**Lo que las métricas descartan o no confirman:**
+- **Créditos de CPU:** bajaron de 11,7 (18:00) a 3,2 (18:55), pero **nunca llegaron a 0**. No hubo estrangulamiento
+  de la CPU por créditos.
+- **Conexiones:** el máximo por minuto en la meseta fue 59, por debajo de las 68 de la siembra, cuando sí se agotaron.
+  No hay señal de agotamiento en la meseta, aunque el máximo por minuto puede ocultar picos de segundos.
+- **CPU de la RDS como causa del ciclo:** la correlación entre los falsos bloqueos del minuto *t* y la CPU es −0,03 en
+  el mismo minuto y −0,15 en el anterior, pero **0,85 en el minuto siguiente**. Los picos de CPU (20–42 %) llegan un
+  minuto **después** de cada parada, no antes: son consecuencia (probablemente la cola acumulada y los reintentos), no
+  causa.
+- **Disco:** latencias de pocos milisegundos y cola casi vacía en la meseta.
+
+**Lo que sí confirman:**
+- **Presión de memoria.** Con 1 GB de RAM, la memoria libre estuvo entre 52 y 114 MB toda la sesión, y el swap pasó
+  de 43 MB al empezar la meseta a 139 MB a las 18:10 y a 230 MB como máximo. Es coherente con que la degradación
+  empeore con el tiempo, pero las métricas por minuto no muestran que cause cada parada de ~3 min.
+
+**Conclusión:** CloudWatch **no confirma** que la RDS cause el ciclo de ~3 min: no hubo agotamiento de créditos ni de
+conexiones en la meseta, y la CPU sube después de las paradas. La causa del ciclo **sigue siendo una hipótesis**. Sí
+queda confirmado que la instancia trabajó al límite de memoria y en swap creciente, lo mismo que la dejó corta en HA03.
+
 **Sin explicar:**
-- **El ciclo de ~3 min.** Puede deberse a checkpoints disparados por el volumen de WAL o al agotamiento de créditos;
-  no se puede afirmar sin las métricas.
+- **El ciclo de ~3 min.** Quedan como candidatos checkpoints de PostgreSQL, el autovacuum o pausas en los propios
+  servicios (pool de conexiones, GC). Distinguirlos pide Performance Insights o los logs de PostgreSQL
+  (`log_checkpoints`, `log_autovacuum_min_duration`), que no estaban activos.
 - **Los timeouts sueltos fuera de la meseta,** a las 16:45:00, 17:12:00 y 17:19:00, siempre en el segundo :00, con
   Identidad respondiendo en 307–370 ms. No hay CronJobs activos ni tareas periódicas en el código de Identidad.
 
-**Verificación pendiente.** CloudWatch conserva 15 días las métricas de la RDS, aunque la instancia ya no exista. Se
-pueden consultar, solo en lectura, hasta ~2026-11-30, para la ventana 17:43–18:54:
-- `CPUUtilization` y `CPUCreditBalance`;
-- `DatabaseConnections`;
-- `WriteIOPS`, `DiskQueueDepth` y `WriteLatency` / `ReadLatency`.
-
-Si confirman la RDS, la causa raíz queda cerrada.
-
-### Por qué la RDS afecta tanto
+### Por qué una parada corta afecta tanto
 
 El consentimiento se consulta **síncronamente, sin caché, en cada operación de dos servicios del camino crítico**, con
 un timeout de 300 ms y un breaker que falla cerrado sin dejar registro. Cualquier parada de más de 300 ms en Identidad
