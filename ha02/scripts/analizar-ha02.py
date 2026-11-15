@@ -477,7 +477,14 @@ def main(argv: list[str] | None = None) -> int:
         },
     }
     fb = falsos_bloqueos(esc, leer_avisos(args.avisos, esc) if args.avisos else None)
-    informe = {"metas": METAS, "escenarios_sin_datos_por_tiempo": sorted(omitidos), "criterios": resultado, "falsos_bloqueos": fb, "escenarios": esc, "cotizacion": cot}
+    informe = {
+        "metas": METAS,
+        "escenarios_sin_datos_por_tiempo": sorted(omitidos),
+        "criterios": resultado,
+        "falsos_bloqueos": fb,
+        "escenarios": esc,
+        "cotizacion": cot,
+    }
     args.salida.write_text(json.dumps(informe, indent=2, ensure_ascii=False), encoding="utf-8")
     for nombre, valor in resultado.items():
         print(f"{nombre:<22} {valor['veredicto']}")
