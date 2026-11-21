@@ -8,7 +8,7 @@
 Está en el paquete de evidencia de la sesión, fuera de git, junto con `sesion.log` con las horas UTC. Las métricas
 de la RDS en CloudWatch, consultadas después del destroy, sí van en git: `cloudwatch-rds-por-minuto.csv`.
 
-Las decisiones que se derivan van en el ADR-0024 de `solventa-backend`.
+Las decisiones que se derivan van en el ADR-0028 de `solventa-backend`.
 
 ## Montaje
 
