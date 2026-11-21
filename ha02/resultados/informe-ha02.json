@@ -1,0 +1,631 @@
+{
+  "metas": {
+    "perfilamiento_p95_ms": 400.0,
+    "perfilamiento_p99_ms": 800.0,
+    "perfilamientos_por_hora": 20000,
+    "cotizacion_p95_ms": 250.0,
+    "revocacion_max_s": 300.0
+  },
+  "escenarios_sin_datos_por_tiempo": [],
+  "criterios": {
+    "c1_latencia": {
+      "veredicto": "no_cumple",
+      "por_escenario": {
+        "miss": {
+          "n": 5041,
+          "p50_ms": 87.1,
+          "p95_ms": 112.1,
+          "p99_ms": 195.7,
+          "max_ms": 541.2,
+          "veredicto": "cumple"
+        },
+        "hit": {
+          "n": 5041,
+          "p50_ms": 22.3,
+          "p95_ms": 36.7,
+          "p99_ms": 102.3,
+          "max_ms": 626.1,
+          "veredicto": "cumple"
+        },
+        "lenta_4a": {
+          "n": 1201,
+          "p50_ms": 381.6,
+          "p95_ms": 529.3,
+          "p99_ms": 3968.2,
+          "max_ms": 9313.2,
+          "veredicto": "no_cumple"
+        }
+      }
+    },
+    "c2_rendimiento": {
+      "veredicto": "no_cumple",
+      "perfilamientos_201": 18121,
+      "ventana_s": 3600.0,
+      "perfilamientos_por_hora": 18121,
+      "errores_saturacion": 4,
+      "iteraciones_descartadas": 0
+    },
+    "c3_cotizacion": {
+      "veredicto": "no_cumple",
+      "meta_p95_ms": 250.0,
+      "evidencia_principal": "diferencia_p95_ms",
+      "nota": "el veredicto es solo la referencia frente a RQ-L1; el p95 absoluto no es comparable con HA01 (simulador a 200-500 ms); c3 se juzga por la diferencia entre la línea base y la meseta",
+      "base": {
+        "n": 5000,
+        "p50_ms": 34.1,
+        "p95_ms": 111.1,
+        "p99_ms": 219.5,
+        "max_ms": 1183.8,
+        "tasa_fallidas": 0.0,
+        "tasa_aproximadas": 0.0002,
+        "errores_saturacion": 0
+      },
+      "meseta": {
+        "n": 29980,
+        "p50_ms": 38.2,
+        "p95_ms": 456.7,
+        "p99_ms": 2754.0,
+        "max_ms": 9999.8,
+        "tasa_fallidas": 0.0008,
+        "tasa_aproximadas": 0.1264,
+        "errores_saturacion": 25
+      },
+      "diferencia_p95_ms": 345.6,
+      "valida": false
+    },
+    "c4_degradacion": {
+      "veredicto": "no_cumple",
+      "por_escenario": {
+        "lenta_4b": {
+          "veredicto": "no_cumple",
+          "n": 1201,
+          "p50_ms": 86.6,
+          "p95_ms": 724.4,
+          "p99_ms": 744.4,
+          "max_ms": 931.2,
+          "estados": {
+            "201": 1201
+          },
+          "tasa_marcadas": 0.9226,
+          "marca_exigida": false
+        },
+        "caida_5a": {
+          "veredicto": "no_cumple",
+          "n": 1201,
+          "p50_ms": 76.4,
+          "p95_ms": 125.6,
+          "p99_ms": 1152.8,
+          "max_ms": 6753.1,
+          "estados": {
+            "201": 1159,
+            "403": 42
+          },
+          "tasa_marcadas": 1.0,
+          "marca_exigida": true
+        },
+        "caida_5b": {
+          "veredicto": "no_cumple",
+          "n": 1201,
+          "p50_ms": 23.8,
+          "p95_ms": 60.0,
+          "p99_ms": 872.8,
+          "max_ms": 3035.7,
+          "estados": {
+            "201": 1161,
+            "403": 40
+          },
+          "tasa_marcadas": 1.0,
+          "marca_exigida": true
+        }
+      }
+    },
+    "c5_consentimiento": {
+      "veredicto": "no_cumple",
+      "estados_por_escenario": {
+        "humo": {
+          "403": 12
+        },
+        "meseta": {
+          "403": 1045
+        },
+        "sin_consentimiento": {
+          "403": 301
+        }
+      },
+      "total_403_k6": 1358,
+      "falsos_bloqueos_k6": 2567,
+      "base": {
+        "desde_utc": "2026-11-15T16:42:07Z",
+        "hasta_utc": "2026-11-15T19:45:53Z",
+        "intentos_bloqueados_carga": 4028,
+        "clientes_sin_consentimiento": 294,
+        "perfiles_de_clientes_sin_consentimiento": 0,
+        "perfiles_en_ventana": 34203,
+        "lineas_linaje_en_ventana": 68406
+      },
+      "evidencia": "indirecta: intentos bloqueados en la base y ningún perfil de esos clientes (sin contador)"
+    },
+    "c6_revocacion": {
+      "veredicto": "cumple",
+      "clientes": 49,
+      "bloqueados": 49,
+      "no_bloqueados": 0,
+      "max_s": 0.168,
+      "mediana_s": 0.084,
+      "limite_s": 300.0,
+      "resolucion_s": 1.0,
+      "redis_tras_revocar": {
+        "clientes": 49,
+        "claves_principales": 98,
+        "claves_respaldo": 98,
+        "posibles_por_tipo": 98
+      },
+      "lectura": "no se sirve, no se borra de Redis (el borrado es de V-11)"
+    },
+    "c7_evidencia": {
+      "veredicto": "cumple",
+      "muestreo": {
+        "perfilamiento": {
+          "muestras": 929,
+          "desde_utc": "2026-11-15T16:36:19Z",
+          "hasta_utc": "2026-11-15T19:45:37Z",
+          "replicas_max": 2.0,
+          "pods_listos_min": 2.0,
+          "pods_listos_max": 3.0,
+          "cpu_total_m_max": 479.0,
+          "mem_total_mi_max": 169.0,
+          "hpa_cpu_pct_max": 95.0,
+          "reinicios_en_ventana": 0.0
+        },
+        "cotizacion": {
+          "muestras": 930,
+          "desde_utc": "2026-11-15T16:36:19Z",
+          "hasta_utc": "2026-11-15T19:45:45Z",
+          "replicas_max": 3.0,
+          "pods_listos_min": 2.0,
+          "pods_listos_max": 3.0,
+          "cpu_total_m_max": 191.0,
+          "mem_total_mi_max": 252.0,
+          "hpa_cpu_pct_max": 34.0,
+          "reinicios_en_ventana": 0.0
+        },
+        "identidad": {
+          "muestras": 929,
+          "desde_utc": "2026-11-15T16:36:19Z",
+          "hasta_utc": "2026-11-15T19:45:41Z",
+          "replicas_max": 6.0,
+          "pods_listos_min": 2.0,
+          "pods_listos_max": 6.0,
+          "cpu_total_m_max": 5530.0,
+          "mem_total_mi_max": 534.0,
+          "hpa_cpu_pct_max": 368.0,
+          "reinicios_en_ventana": 0.0
+        }
+      },
+      "archivos": {
+        "perfilamiento": [
+          "resultados/k6/20261115T164209Z-ha02-humo/perfilamiento.json.gz",
+          "resultados/k6/20261115T170310Z-ha02-miss/perfilamiento.json.gz",
+          "resultados/k6/20261115T171852Z-ha02-calentar/perfilamiento.json.gz",
+          "resultados/k6/20261115T172023Z-ha02-hit/perfilamiento.json.gz",
+          "resultados/k6/20261115T173556Z-ha02-sin_consentimiento/perfilamiento.json.gz",
+          "resultados/k6/20261115T174346Z-ha02-meseta/perfilamiento.json.gz",
+          "resultados/k6/20261115T185552Z-ha02-lenta_4a/perfilamiento.json.gz",
+          "resultados/k6/20261115T190811Z-ha02-lenta_4b/perfilamiento.json.gz",
+          "resultados/k6/20261115T192028Z-ha02-caida_5a/perfilamiento.json.gz",
+          "resultados/k6/20261115T193131Z-ha02-caida_5b/perfilamiento.json.gz"
+        ],
+        "cotizacion": "resultados/k6/20261115T174346Z-ha02-meseta/cotizacion.json.gz",
+        "revocacion": "resultados/k6/20261115T194352Z-ha02-revocacion/revocacion.json",
+        "redis": "resultados/redis.json",
+        "db": "resultados/db.json",
+        "avisos": "resultados/logs-avisos/perfilamiento-avisos.log"
+      }
+    }
+  },
+  "falsos_bloqueos": {
+    "definicion": "403 a un cliente con consentimiento: Perfilamiento falla cerrado si Identidad no responde (identidad_no_disponible), responde 5xx o tiene el circuito abierto. No son errores por saturación.",
+    "total": 2567,
+    "solicitudes_con_consentimiento": 36724,
+    "frecuencia": 0.0699,
+    "por_escenario": {
+      "caida_5a": {
+        "falsos_bloqueos": 42,
+        "solicitudes_con_consentimiento": 1201,
+        "frecuencia": 0.034971,
+        "errores_saturacion": 0,
+        "avisos_identidad": {
+          "identidad_no_disponible error=ReadTimeout": 12
+        }
+      },
+      "caida_5b": {
+        "falsos_bloqueos": 40,
+        "solicitudes_con_consentimiento": 1201,
+        "frecuencia": 0.033306,
+        "errores_saturacion": 0,
+        "avisos_identidad": {
+          "identidad_no_disponible error=ReadTimeout": 11
+        }
+      },
+      "calentar": {
+        "falsos_bloqueos": 1,
+        "solicitudes_con_consentimiento": 993,
+        "frecuencia": 0.001007,
+        "errores_saturacion": 0,
+        "avisos_identidad": {
+          "identidad_no_disponible error=ReadTimeout": 1
+        }
+      },
+      "hit": {
+        "falsos_bloqueos": 0,
+        "solicitudes_con_consentimiento": 5041,
+        "frecuencia": 0.0,
+        "errores_saturacion": 0,
+        "avisos_identidad": {}
+      },
+      "humo": {
+        "falsos_bloqueos": 1,
+        "solicitudes_con_consentimiento": 289,
+        "frecuencia": 0.00346,
+        "errores_saturacion": 0,
+        "avisos_identidad": {
+          "identidad_no_disponible error=ReadTimeout": 1
+        }
+      },
+      "lenta_4a": {
+        "falsos_bloqueos": 51,
+        "solicitudes_con_consentimiento": 1201,
+        "frecuencia": 0.042465,
+        "errores_saturacion": 0,
+        "avisos_identidad": {
+          "identidad_no_disponible error=ReadTimeout": 20
+        }
+      },
+      "lenta_4b": {
+        "falsos_bloqueos": 0,
+        "solicitudes_con_consentimiento": 1201,
+        "frecuencia": 0.0,
+        "errores_saturacion": 0,
+        "avisos_identidad": {}
+      },
+      "meseta": {
+        "falsos_bloqueos": 2431,
+        "solicitudes_con_consentimiento": 20556,
+        "frecuencia": 0.118262,
+        "errores_saturacion": 4,
+        "avisos_identidad": {
+          "identidad_no_disponible error=ReadTimeout": 488
+        }
+      },
+      "miss": {
+        "falsos_bloqueos": 1,
+        "solicitudes_con_consentimiento": 5041,
+        "frecuencia": 0.000198,
+        "errores_saturacion": 0,
+        "avisos_identidad": {
+          "identidad_no_disponible error=ReadTimeout": 1
+        }
+      },
+      "sin_consentimiento": {
+        "falsos_bloqueos": 0,
+        "solicitudes_con_consentimiento": 0,
+        "frecuencia": null,
+        "errores_saturacion": 0,
+        "avisos_identidad": {}
+      }
+    },
+    "avisos_fuera_de_escenarios": {
+      "identidad_no_disponible error=ReadTimeout": 1
+    },
+    "nota": null
+  },
+  "escenarios": {
+    "caida_5a": {
+      "con_consentimiento": {
+        "n": 1201,
+        "p50_ms": 76.4,
+        "p95_ms": 125.6,
+        "p99_ms": 1152.8,
+        "max_ms": 6753.1
+      },
+      "estados_con_consentimiento": {
+        "201": 1159,
+        "403": 42
+      },
+      "errores_saturacion": 0,
+      "iteraciones_descartadas": 0,
+      "clientes_agotados": 0,
+      "perfil_fallido": 0.035,
+      "perfil_hit_cache": 0.0,
+      "perfil_degradado": 1.0,
+      "perfil_marcado": 1.0,
+      "perfil_con_ausentes": 1.0,
+      "ventana_201_s": 599.8,
+      "ventana_solicitudes_utc": [
+        "2026-11-15T19:20:29+00:00",
+        "2026-11-15T19:30:29+00:00"
+      ]
+    },
+    "caida_5b": {
+      "con_consentimiento": {
+        "n": 1201,
+        "p50_ms": 23.8,
+        "p95_ms": 60.0,
+        "p99_ms": 872.8,
+        "max_ms": 3035.7
+      },
+      "estados_con_consentimiento": {
+        "201": 1161,
+        "403": 40
+      },
+      "errores_saturacion": 0,
+      "iteraciones_descartadas": 0,
+      "clientes_agotados": 0,
+      "perfil_fallido": 0.0333,
+      "perfil_hit_cache": 1.0,
+      "perfil_degradado": 1.0,
+      "perfil_marcado": 1.0,
+      "perfil_con_ausentes": 1.0,
+      "ventana_201_s": 600.0,
+      "ventana_solicitudes_utc": [
+        "2026-11-15T19:31:32+00:00",
+        "2026-11-15T19:41:32+00:00"
+      ]
+    },
+    "calentar": {
+      "con_consentimiento": {
+        "n": 993,
+        "p50_ms": 100.2,
+        "p95_ms": 188.3,
+        "p99_ms": 402.7,
+        "max_ms": 509.9
+      },
+      "estados_con_consentimiento": {
+        "201": 992,
+        "403": 1
+      },
+      "errores_saturacion": 0,
+      "iteraciones_descartadas": 0,
+      "clientes_agotados": 0,
+      "perfil_fallido": 0.001,
+      "perfil_hit_cache": 0.0,
+      "perfil_degradado": 0.0,
+      "perfil_marcado": 0.0,
+      "perfil_con_ausentes": 0.0,
+      "ventana_201_s": 11.1,
+      "ventana_solicitudes_utc": [
+        "2026-11-15T17:18:52+00:00",
+        "2026-11-15T17:19:03+00:00"
+      ]
+    },
+    "hit": {
+      "con_consentimiento": {
+        "n": 5041,
+        "p50_ms": 22.3,
+        "p95_ms": 36.7,
+        "p99_ms": 102.3,
+        "max_ms": 626.1
+      },
+      "estados_con_consentimiento": {
+        "201": 5041
+      },
+      "errores_saturacion": 0,
+      "iteraciones_descartadas": 0,
+      "clientes_agotados": 0,
+      "perfil_fallido": 0.0,
+      "perfil_hit_cache": 0.9998,
+      "perfil_degradado": 0.0,
+      "perfil_marcado": 0.0,
+      "perfil_con_ausentes": 0.0,
+      "ventana_201_s": 900.0,
+      "ventana_solicitudes_utc": [
+        "2026-11-15T17:20:23+00:00",
+        "2026-11-15T17:35:23+00:00"
+      ]
+    },
+    "humo": {
+      "con_consentimiento": {
+        "n": 289,
+        "p50_ms": 85.2,
+        "p95_ms": 114.1,
+        "p99_ms": 241.5,
+        "max_ms": 464.2
+      },
+      "estados_con_consentimiento": {
+        "201": 288,
+        "403": 1
+      },
+      "errores_saturacion": 0,
+      "iteraciones_descartadas": 0,
+      "clientes_agotados": 0,
+      "perfil_fallido": 0.0033,
+      "perfil_hit_cache": 0.1424,
+      "perfil_degradado": 0.0,
+      "perfil_marcado": 0.0,
+      "perfil_con_ausentes": 0.0,
+      "sin_consentimiento": {
+        "n": 12,
+        "p50_ms": 18.7,
+        "p95_ms": 28.9,
+        "p99_ms": 31.9,
+        "max_ms": 32.7
+      },
+      "estados_sin_consentimiento": {
+        "403": 12
+      },
+      "ventana_201_s": 299.8,
+      "ventana_solicitudes_utc": [
+        "2026-11-15T16:42:10+00:00",
+        "2026-11-15T16:47:10+00:00"
+      ]
+    },
+    "lenta_4a": {
+      "con_consentimiento": {
+        "n": 1201,
+        "p50_ms": 381.6,
+        "p95_ms": 529.3,
+        "p99_ms": 3968.2,
+        "max_ms": 9313.2
+      },
+      "estados_con_consentimiento": {
+        "201": 1150,
+        "403": 51
+      },
+      "errores_saturacion": 0,
+      "iteraciones_descartadas": 0,
+      "clientes_agotados": 0,
+      "perfil_fallido": 0.0425,
+      "perfil_hit_cache": 0.0,
+      "perfil_degradado": 0.0,
+      "perfil_marcado": 0.0,
+      "perfil_con_ausentes": 0.0,
+      "ventana_201_s": 599.7,
+      "ventana_solicitudes_utc": [
+        "2026-11-15T18:55:53+00:00",
+        "2026-11-15T19:05:53+00:00"
+      ]
+    },
+    "lenta_4b": {
+      "con_consentimiento": {
+        "n": 1201,
+        "p50_ms": 86.6,
+        "p95_ms": 724.4,
+        "p99_ms": 744.4,
+        "max_ms": 931.2
+      },
+      "estados_con_consentimiento": {
+        "201": 1201
+      },
+      "errores_saturacion": 0,
+      "iteraciones_descartadas": 0,
+      "clientes_agotados": 0,
+      "perfil_fallido": 0.0,
+      "perfil_hit_cache": 0.0,
+      "perfil_degradado": 0.9226,
+      "perfil_marcado": 0.9226,
+      "perfil_con_ausentes": 0.9226,
+      "ventana_201_s": 599.8,
+      "ventana_solicitudes_utc": [
+        "2026-11-15T19:08:12+00:00",
+        "2026-11-15T19:18:12+00:00"
+      ]
+    },
+    "meseta": {
+      "con_consentimiento": {
+        "n": 20556,
+        "p50_ms": 23.1,
+        "p95_ms": 323.9,
+        "p99_ms": 1564.6,
+        "max_ms": 9999.3
+      },
+      "estados_con_consentimiento": {
+        "201": 18121,
+        "403": 2431,
+        "0": 4
+      },
+      "errores_saturacion": 4,
+      "iteraciones_descartadas": 0,
+      "clientes_agotados": 0,
+      "perfil_fallido": 0.1127,
+      "perfil_hit_cache": 0.9452,
+      "perfil_degradado": 0.0,
+      "perfil_marcado": 0.0,
+      "perfil_con_ausentes": 0.0,
+      "sin_consentimiento": {
+        "n": 1045,
+        "p50_ms": 18.3,
+        "p95_ms": 235.5,
+        "p99_ms": 970.1,
+        "max_ms": 3387.6
+      },
+      "estados_sin_consentimiento": {
+        "403": 1045
+      },
+      "ventana_201_s": 3600.0,
+      "ventana_solicitudes_utc": [
+        "2026-11-15T17:53:47+00:00",
+        "2026-11-15T18:53:47+00:00"
+      ]
+    },
+    "miss": {
+      "con_consentimiento": {
+        "n": 5041,
+        "p50_ms": 87.1,
+        "p95_ms": 112.1,
+        "p99_ms": 195.7,
+        "max_ms": 541.2
+      },
+      "estados_con_consentimiento": {
+        "201": 5040,
+        "403": 1
+      },
+      "errores_saturacion": 0,
+      "iteraciones_descartadas": 0,
+      "clientes_agotados": 0,
+      "perfil_fallido": 0.0002,
+      "perfil_hit_cache": 0.0,
+      "perfil_degradado": 0.0,
+      "perfil_marcado": 0.0,
+      "perfil_con_ausentes": 0.0,
+      "ventana_201_s": 900.0,
+      "ventana_solicitudes_utc": [
+        "2026-11-15T17:03:11+00:00",
+        "2026-11-15T17:18:11+00:00"
+      ]
+    },
+    "sin_consentimiento": {
+      "con_consentimiento": {
+        "n": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "p99_ms": null,
+        "max_ms": null
+      },
+      "estados_con_consentimiento": {},
+      "errores_saturacion": 0,
+      "iteraciones_descartadas": 0,
+      "clientes_agotados": 0,
+      "perfil_fallido": 0.0,
+      "perfil_hit_cache": null,
+      "perfil_degradado": null,
+      "perfil_marcado": null,
+      "perfil_con_ausentes": null,
+      "sin_consentimiento": {
+        "n": 301,
+        "p50_ms": 18.1,
+        "p95_ms": 51.7,
+        "p99_ms": 221.8,
+        "max_ms": 260.3
+      },
+      "estados_sin_consentimiento": {
+        "403": 301
+      },
+      "ventana_solicitudes_utc": [
+        "2026-11-15T17:35:57+00:00",
+        "2026-11-15T17:40:57+00:00"
+      ]
+    }
+  },
+  "cotizacion": {
+    "base": {
+      "n": 5000,
+      "p50_ms": 34.1,
+      "p95_ms": 111.1,
+      "p99_ms": 219.5,
+      "max_ms": 1183.8,
+      "tasa_fallidas": 0.0,
+      "tasa_aproximadas": 0.0002,
+      "errores_saturacion": 0
+    },
+    "meseta": {
+      "n": 29980,
+      "p50_ms": 38.2,
+      "p95_ms": 456.7,
+      "p99_ms": 2754.0,
+      "max_ms": 9999.8,
+      "tasa_fallidas": 0.0008,
+      "tasa_aproximadas": 0.1264,
+      "errores_saturacion": 25
+    }
+  }
+}
