@@ -12,6 +12,11 @@ cliente solo vive en memoria durante la siembra.
 Uso (desde la EC2 del generador, contra el NodePort de Identidad del NLB interno):
     python3 sembrar-clientes.py --url http://<nlb_dns_name>:30081 --n 1000 --salida clientes.json
 
+HA02 también siembra clientes **sin** consentimiento (criterio 5: deben bloquearse sin llamar a
+ninguna fuente). Con --sin-consentimiento el cliente se crea y no se le otorga el consentimiento:
+    python3 sembrar-clientes.py --url http://<nlb_dns_name>:30081 --n 300 --sin-consentimiento \\
+        --salida sin-consentimiento.json
+
 Solo biblioteca estándar. Rerun seguro: cada corrida usa un identificador propio (--run), así
 que no choca con documentos ni correos de corridas anteriores.
 """
@@ -60,7 +65,7 @@ def _con_reintentos(fn, *args):
     return ultimo
 
 
-def sembrar_uno(base: str, run: str, i: int) -> str:
+def sembrar_uno(base: str, run: str, i: int, consentir: bool = True) -> str:
     sufijo = f"{run}{i:05d}"
     cliente = {
         "nombre": "Sintetico",
@@ -78,6 +83,8 @@ def sembrar_uno(base: str, run: str, i: int) -> str:
     if estado != 201:
         raise RuntimeError(f"cliente {i}: POST /v1/clientes -> {estado} {cuerpo.get('detail')}")
     cliente_id, token = cuerpo["id"], cuerpo["access_token"]
+    if not consentir:
+        return cliente_id
 
     estado, cuerpo = _con_reintentos(
         _http,
@@ -98,6 +105,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--salida", default="clientes.json")
     ap.add_argument("--hilos", type=int, default=16)
     ap.add_argument("--run", default=None, help="identificador alfanumérico de la siembra (4 car.)")
+    ap.add_argument(
+        "--sin-consentimiento",
+        action="store_true",
+        help="crea los clientes sin otorgarles el consentimiento (HA02, criterio 5)",
+    )
     args = ap.parse_args(argv)
 
     base = args.url.rstrip("/")
@@ -114,7 +126,9 @@ def main(argv: list[str] | None = None) -> int:
     ids: list[str] = []
     errores: list[str] = []
     with ThreadPoolExecutor(max_workers=args.hilos) as pool:
-        futuros = [pool.submit(sembrar_uno, base, run, i) for i in range(args.n)]
+        futuros = [
+            pool.submit(sembrar_uno, base, run, i, not args.sin_consentimiento) for i in range(args.n)
+        ]
         for n, f in enumerate(as_completed(futuros), 1):
             try:
                 ids.append(f.result())
@@ -126,7 +140,8 @@ def main(argv: list[str] | None = None) -> int:
     with open(args.salida, "w", encoding="utf-8") as fh:
         json.dump(sorted(ids), fh)
     print(
-        f"Siembra {run}: {len(ids)} clientes con consentimiento, {len(errores)} errores, "
+        f"Siembra {run}: {len(ids)} clientes "
+        f"{'sin' if args.sin_consentimiento else 'con'} consentimiento, {len(errores)} errores, "
         f"{time.monotonic() - inicio:.0f} s -> {args.salida}"
     )
     for e in errores[:10]:

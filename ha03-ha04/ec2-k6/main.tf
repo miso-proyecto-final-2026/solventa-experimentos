@@ -58,6 +58,11 @@ locals {
     "scripts/analizar-ha04.py"     = "${path.module}/../scripts/analizar-ha04.py"
     "scripts/sembrar-clientes.py"  = "${path.module}/../../ha01-ronda2/seed/sembrar-clientes.py"
     "scripts/correr-escenario.sh"  = "${path.module}/correr-escenario.sh"
+    # HA02 (perfilamiento en línea) reutiliza este generador: ver ../../ha02/RUNBOOK.md.
+    "scripts/ha02-perfilamiento.js" = "${path.module}/../../ha02/scripts/ha02-perfilamiento.js"
+    "scripts/ha02-cotizacion.js"    = "${path.module}/../../ha02/scripts/ha02-cotizacion.js"
+    "scripts/revocacion.py"         = "${path.module}/../../ha02/scripts/revocacion.py"
+    "scripts/correr-ha02.sh"        = "${path.module}/../../ha02/ec2/correr-ha02.sh"
   }
 }
 

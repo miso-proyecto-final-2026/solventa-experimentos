@@ -23,3 +23,6 @@ ha03-ha04/ec2-k6/.terraform.lock.hcl
 ha03-ha04/ec2-k6/*.tfstate*
 ha03-ha04/ec2-k6/*.tfplan
 ha03-ha04/resultados/
+
+# HA02: evidencia cruda de la sesión (al repo solo van el informe y informe-ha02.json)
+ha02/resultados/
