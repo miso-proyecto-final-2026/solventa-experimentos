@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "deny": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebSearch",
+      "Bash(gh:*)",
+      "Bash(git clone:*)",
+      "Read(//c/Users/esteb/solventa-hub/**)",
+      "Read(//c/Users/esteb/solventa-evidencias/**)",
+      "Read(//c/Users/esteb/.claude/projects/**)"
+    ]
+  }
+}
