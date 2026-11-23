@@ -1,0 +1,11 @@
+ok      compatible-01-campo-opcional-en-respuesta.json: Agregar un campo opcional a la cotización -> compatible
+ok      compatible-02-ruta-nueva.json: Agregar una ruta nueva -> compatible
+ok      compatible-03-campo-opcional-en-solicitud.json: Agregar un campo opcional a la solicitud de cotización -> compatible
+ok      compatible-04-descripcion.json: Cambiar la descripción del API -> compatible
+ok      rompe-01-quitar-campo-de-respuesta.json: Quitar `prima_mensual` de la cotización que recibe el socio -> rompe
+ok      rompe-02-volver-obligatorio-un-campo.json: Volver obligatoria `periodicidad_pago` al suscribir -> rompe
+ok      rompe-03-quitar-una-ruta.json: Quitar `GET /partners/v1/polizas/{suscripcion_id}` sin deprecarla -> rompe
+ok      rompe-04-cambiar-un-tipo.json: Cambiar `prima_anual` de entero a texto -> rompe
+ok      rompe-05-nuevo-encabezado-obligatorio.json: Exigir un encabezado nuevo al cotizar -> rompe
+No breaking changes to report, but the specs are different.
+Corrida: https://github.com/miso-proyecto-final-2026/solventa-backend/actions/runs/45086319160 (PR #95)

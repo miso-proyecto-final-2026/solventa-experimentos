@@ -1,0 +1,8 @@
+Kit del integrador HA07 — 2026-11-22T22:51:07Z
+backend: feature/HA07-contratos-socios 95b1d98
+b335feaf58bb6d876929b13525c511d5bedbcabb205002ba94bb4eb3327e9ae7 *documentacion/errores-y-reintentos.md
+a4f56f4151b3e89ed7ae54fe9e6651e4602ba98f6fdb20478c84fc52c7267e5e *documentacion/guia-de-inicio.md
+24b5e8eec163f7314923de0593c3434304c4978cdc066feec3d35ca5e05c5ff5 *documentacion/openapi.json
+283bf181a2be5055f7bebda21502e89e709a355d7d025aed1366dfb9f4517e74 *TAREA.md
+e569931edc61f37245599ce1841971e351ab448399d9fe82a5e4854440edcb39 *CLAUDE.md
+9c23bd775b3e7db1f1801f08daf10aa0ca8008a62b9ee5d8ed6902617440c85b *.claude/settings.json
