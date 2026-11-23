@@ -1,0 +1,8 @@
+actividad,descripcion,inicio_utc,fin_utc,minutos,resultado,notas
+A1,Leer la documentación,23:37:23,23:38:09,1,completada,
+A2,Estado del API y primer token,23:38:09,23:38:49,1,completada,status 200 operativo; token 3600s
+A3,Primera cotización,23:38:49,23:38:58,1,completada,201 con producto y datos del ejemplo del contrato
+A4,Venta completa hasta la póliza emitida,23:38:58,00:11:40,33,completada,"Bloqueada 00:00:26-00:11:11 esperando soporte (D-05: decisión DERIVADA, aprobada manualmente); firma y emisión OK"
+A5,Errores provocados y su manejo,00:11:40,00:12:55,1,completada,"401 INVALID_TOKEN, 400 CONSENTIMIENTO_NO_VIGENTE, 409 IDEMPOTENCY_CONFLICT, 429 con Retry-After=1: todos como documenta el catálogo"
+A6,Programa del socio terminado y probado de punta a punta,00:12:55,00:19:28,7,completada,"Corrida nueva: venta aae4ae8e quedó DERIVADA (D-08, backend#84); pregunta a soporte ~00:15:25, aprobada; respuesta recibida 00:19:16; retomada con --venta: 15/15 OK, póliza SFKMJDQ607731S6X8SKQ EMITIDA"
+A7,resumen.md,00:15:05,00:19:41,2,completada,"Primera versión 00:15:05-00:15:25; actualizado 00:19:28-00:19:41 tras completar A6"

@@ -1,0 +1,43 @@
+{
+  "provocados": 883,
+  "con_codigo_del_catalogo": 883,
+  "por_codigo": {
+    "400 INVALID_REQUEST": 139,
+    "401 INVALID_TOKEN": 553,
+    "404 RESOURCE_NOT_FOUND": 102,
+    "405 INVALID_REQUEST": 84,
+    "409 IDEMPOTENCY_CONFLICT": 5
+  },
+  "respuestas_por_operacion": {
+    "GET /partners/v1/polizas/{suscripcion_id} 200": 25,
+    "GET /partners/v1/polizas/{suscripcion_id} 401": 57,
+    "GET /partners/v1/polizas/{suscripcion_id} 404": 24,
+    "GET /partners/v1/polizas/{suscripcion_id} 405": 14,
+    "GET /partners/v1/status 200": 3,
+    "GET /partners/v1/status 405": 7,
+    "GET /partners/v1/suscripciones/{suscripcion_id}/documento-firma 200": 25,
+    "GET /partners/v1/suscripciones/{suscripcion_id}/documento-firma 401": 57,
+    "GET /partners/v1/suscripciones/{suscripcion_id}/documento-firma 404": 24,
+    "GET /partners/v1/suscripciones/{suscripcion_id}/documento-firma 405": 14,
+    "GET /partners/v1/suscripciones/{suscripcion_id}/documento-firma/pdf 200": 25,
+    "GET /partners/v1/suscripciones/{suscripcion_id}/documento-firma/pdf 401": 57,
+    "GET /partners/v1/suscripciones/{suscripcion_id}/documento-firma/pdf 404": 24,
+    "GET /partners/v1/suscripciones/{suscripcion_id}/documento-firma/pdf 405": 14,
+    "POST /partners/v1/cotizaciones 201": 3,
+    "POST /partners/v1/cotizaciones 400": 27,
+    "POST /partners/v1/cotizaciones 401": 85,
+    "POST /partners/v1/cotizaciones 405": 7,
+    "POST /partners/v1/cotizaciones 409": 5,
+    "POST /partners/v1/suscripciones 400": 42,
+    "POST /partners/v1/suscripciones 401": 84,
+    "POST /partners/v1/suscripciones 405": 7,
+    "POST /partners/v1/suscripciones/{suscripcion_id}/firma 400": 70,
+    "POST /partners/v1/suscripciones/{suscripcion_id}/firma 401": 156,
+    "POST /partners/v1/suscripciones/{suscripcion_id}/firma 404": 6,
+    "POST /partners/v1/suscripciones/{suscripcion_id}/firma 405": 14,
+    "POST /partners/v1/suscripciones/{suscripcion_id}/firma/codigo 202": 25,
+    "POST /partners/v1/suscripciones/{suscripcion_id}/firma/codigo 401": 57,
+    "POST /partners/v1/suscripciones/{suscripcion_id}/firma/codigo 404": 24,
+    "POST /partners/v1/suscripciones/{suscripcion_id}/firma/codigo 405": 14
+  }
+}
